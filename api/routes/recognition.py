@@ -1,259 +1,287 @@
-"""Image recognition API route."""
+from __future__ import annotations
 
-import io
 import logging
+import os
 import tempfile
-import time
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, File, UploadFile
 from fastapi.responses import JSONResponse
-from PIL import Image, UnidentifiedImageError
-
-from api.schemas import ErrorResponse, FaceResponse, RecognitionResponse
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter()
+router = APIRouter(prefix="/api", tags=["recognition"])
 
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
-ALLOWED_CONTENT_TYPES = {
-    "image/jpeg",
-    "image/png",
-    "image/bmp",
-    "image/webp",
-    "image/tiff",
-}
+# ============================================================================
+# Configuration
+# ============================================================================
+
+# Keep these names because other API modules import them.
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 ALLOWED_SUFFIXES = {
     ".jpg",
     ".jpeg",
     ".png",
-    ".bmp",
     ".webp",
-    ".tif",
-    ".tiff",
+}
+
+ALLOWED_CONTENT_TYPES = {
+    "image/jpeg",
+    "image/jpg",
+    "image/png",
+    "image/webp",
 }
 
 
+# ============================================================================
+# Lazy workflow
+# ============================================================================
+
+_workflow = None
+
+
 def get_workflow():
-    """Create the local workflow lazily so health/docs do not load recognition models."""
+    """
+    Lazily create the image-recognition workflow.
 
-    from app.config import AppConfig
-    from app.detection.face_detector import FaceDetector
-    from app.embeddings.embedding_generator import EmbeddingGenerator
-    from app.recognition.matcher import EmbeddingMatcher
-    from app.storage.database import Database
-    from app.storage.face_repository import FaceRepository
-    from app.workflows.image_recognition import ImageRecognitionWorkflow
+    DeepFace/TensorFlow models are expensive to initialize, so they are
+    created only when recognition is actually requested.
+    """
+    global _workflow
 
-    config = AppConfig.from_environment()
+    if _workflow is None:
+        from app.workflows.image_recognition import ImageRecognitionWorkflow
 
-    return ImageRecognitionWorkflow(
-        FaceDetector(),
-        EmbeddingGenerator(),
-        FaceRepository(Database(config.database_path)),
-        EmbeddingMatcher(),
+        _workflow = ImageRecognitionWorkflow()
+
+    return _workflow
+
+
+# ============================================================================
+# Response helpers
+# ============================================================================
+
+def _success(data: dict[str, Any]) -> JSONResponse:
+    """Return a successful API response."""
+    return JSONResponse(
+        status_code=200,
+        content={
+            "success": True,
+            "data": data,
+        },
     )
 
 
-def _error(code: str, message: str, status_code: int) -> JSONResponse:
-    """Return a consistent API error response."""
-
+def _error(
+    code: str,
+    message: str,
+    status_code: int,
+) -> JSONResponse:
+    """Return a standardized API error response."""
     return JSONResponse(
         status_code=status_code,
-        content=ErrorResponse(
-            error={
+        content={
+            "success": False,
+            "error": {
                 "code": code,
                 "message": message,
-            }
-        ).model_dump(),
+            },
+        },
     )
 
 
-@router.post(
-    "/recognize",
-    response_model=RecognitionResponse,
-    responses={
-        400: {"model": ErrorResponse},
-        413: {"model": ErrorResponse},
-        500: {"model": ErrorResponse},
-    },
-)
-async def recognize(
-    file: UploadFile | None = File(default=None),
-) -> RecognitionResponse | JSONResponse:
-    """Recognize faces in a temporary uploaded image."""
+# ============================================================================
+# Upload validation
+# ============================================================================
 
-    # ---------------------------------------------------------
-    # 1. Validate that a file was uploaded
-    # ---------------------------------------------------------
-    if file is None:
-        return _error(
-            "MISSING_FILE",
-            "Please upload an image file.",
-            400,
-        )
+async def _save_upload_temporarily(file: UploadFile) -> str:
+    """
+    Validate and save an uploaded image to a temporary file.
 
-    # ---------------------------------------------------------
-    # 2. Validate MIME type
-    # ---------------------------------------------------------
+    The caller is responsible for deleting the returned temporary file.
+    """
+
+    # ------------------------------------------------------------------------
+    # Validate MIME type
+    # ------------------------------------------------------------------------
+
     if file.content_type not in ALLOWED_CONTENT_TYPES:
-        return _error(
-            "INVALID_IMAGE",
-            "The uploaded file is not a supported image type.",
-            400,
+        raise ValueError(
+            "Unsupported image type. "
+            "Please upload a JPG, PNG, or WebP image."
         )
 
-    # ---------------------------------------------------------
-    # 3. Determine file suffix
-    # ---------------------------------------------------------
-    suffix = Path(file.filename or "upload.png").suffix.lower()
+    # ------------------------------------------------------------------------
+    # Read file
+    # ------------------------------------------------------------------------
+
+    data = await file.read()
+
+    if not data:
+        raise ValueError("The uploaded image is empty.")
+
+    # ------------------------------------------------------------------------
+    # Validate file size
+    # ------------------------------------------------------------------------
+
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise ValueError(
+            "The uploaded image is too large. "
+            "Maximum size is 10 MB."
+        )
+
+    # ------------------------------------------------------------------------
+    # Determine extension
+    # ------------------------------------------------------------------------
+
+    suffix = Path(file.filename or "").suffix.lower()
 
     if suffix not in ALLOWED_SUFFIXES:
-        suffix = ".png"
+        suffix = ".jpg"
 
-    temporary_path: Path | None = None
+    # ------------------------------------------------------------------------
+    # Create temporary file
+    # ------------------------------------------------------------------------
+
+    temporary_file = tempfile.NamedTemporaryFile(
+        delete=False,
+        suffix=suffix,
+    )
 
     try:
-        # -----------------------------------------------------
-        # 4. Read uploaded file
-        # -----------------------------------------------------
-        content = await file.read(MAX_UPLOAD_BYTES + 1)
+        temporary_file.write(data)
+        temporary_file.flush()
+    finally:
+        temporary_file.close()
 
-        if not content:
-            return _error(
-                "EMPTY_UPLOAD",
-                "The uploaded file is empty.",
-                400,
-            )
+    return temporary_file.name
 
-        # -----------------------------------------------------
-        # 5. Check file size
-        # -----------------------------------------------------
-        if len(content) > MAX_UPLOAD_BYTES:
-            return _error(
-                "FILE_TOO_LARGE",
-                "The uploaded image exceeds the 10 MB limit.",
-                413,
-            )
 
-        # -----------------------------------------------------
-        # 6. Validate actual image contents
-        # -----------------------------------------------------
+# ============================================================================
+# Recognition endpoint
+# ============================================================================
+
+@router.post("/recognize")
+async def recognize(file: UploadFile = File(...)):
+    """
+    Recognize faces in an uploaded image.
+
+    Internal exception details are logged server-side but are never returned
+    to the frontend.
+    """
+
+    temporary_path: str | None = None
+
+    try:
+        # ====================================================================
+        # 1. Validate and save upload
+        # ====================================================================
+
         try:
-            with Image.open(io.BytesIO(content)) as image:
-                image.verify()
+            temporary_path = await _save_upload_temporarily(file)
 
-        except (OSError, UnidentifiedImageError):
+        except ValueError as error:
             return _error(
                 "INVALID_IMAGE",
-                "The uploaded file is not a valid image.",
+                str(error),
                 400,
             )
 
-        # -----------------------------------------------------
-        # 7. Create temporary file
-        # -----------------------------------------------------
-        with tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=suffix,
-        ) as temporary:
-            temporary.write(content)
-            temporary_path = Path(temporary.name)
-
-        # -----------------------------------------------------
-        # 8. Run face recognition workflow
-        # -----------------------------------------------------
-        started = time.perf_counter()
-
-        logger.info(
-            "Starting recognition for uploaded image: %s",
-            file.filename,
-        )
+        # ====================================================================
+        # 2. Get recognition workflow
+        # ====================================================================
 
         workflow = get_workflow()
 
-        logger.info("Recognition workflow created.")
+        # ====================================================================
+        # 3. Run recognition
+        # ====================================================================
 
         report = workflow.recognize(temporary_path)
 
-        elapsed_ms = round(
-            (time.perf_counter() - started) * 1000,
-            2,
-        )
-
-        logger.info(
-            "Recognition completed successfully in %.2f ms.",
-            elapsed_ms,
-        )
-
-        # -----------------------------------------------------
-        # 9. Get configured similarity threshold
-        # -----------------------------------------------------
-        from app.recognition.threshold import SimilarityThreshold
-
-        threshold = SimilarityThreshold().value
-
-        # -----------------------------------------------------
-        # 10. Convert workflow results into API response
-        # -----------------------------------------------------
-        faces = [
-            FaceResponse(
-                recognized=face.recognized,
-                name=face.name,
-                similarity=face.similarity,
-                threshold=threshold,
-                status="known" if face.recognized else "unknown",
+        if report is None:
+            return _error(
+                "PROCESSING_ERROR",
+                "Unable to process this image.",
+                500,
             )
-            for face in report.faces
-        ]
 
-        return RecognitionResponse(
-            faces=faces,
-            face_count=len(faces),
-            processing_time_ms=elapsed_ms,
-        )
+        # ====================================================================
+        # 4. Convert result to JSON-safe data
+        # ====================================================================
 
-    except Exception as exc:
-        # -----------------------------------------------------
-        # IMPORTANT DEBUG INFORMATION
-        # -----------------------------------------------------
-        # This temporarily returns the real exception message.
-        # We are doing this only to diagnose the Render problem.
-        # After we identify and fix the problem, we should change
-        # this back to the generic production-safe message.
-        # -----------------------------------------------------
+        if hasattr(report, "to_dict"):
+            result = report.to_dict()
 
-        logger.exception(
-            "Recognition request failed: %s",
-            exc,
-        )
+        elif isinstance(report, dict):
+            result = report
 
-        error_type = type(exc).__name__
+        else:
+            result = {}
 
-        error_message = str(exc)
+            for attribute in (
+                "faces",
+                "face_count",
+                "processing_time_ms",
+            ):
+                if hasattr(report, attribute):
+                    result[attribute] = getattr(report, attribute)
 
-        logger.error(
-            "Recognition error type: %s",
-            error_type,
-        )
+        # ====================================================================
+        # 5. Return result
+        # ====================================================================
 
-        logger.error(
-            "Recognition error message: %s",
-            error_message,
-        )
+        return _success(result)
+
+    # =========================================================================
+    # IMPORTANT SECURITY HANDLING
+    # =========================================================================
+
+    except Exception:
+        """
+        Log the real exception and traceback on the server.
+
+        Do NOT expose the internal exception message to the browser.
+
+        This prevents messages such as:
+
+            RuntimeError: internal detail
+
+        from being returned through the public API.
+        """
+
+        logger.exception("Recognition request failed")
 
         return _error(
             "PROCESSING_ERROR",
-            f"{error_type}: {error_message}",
+            "Unable to process this image.",
             500,
         )
 
+    # =========================================================================
+    # Cleanup
+    # =========================================================================
+
     finally:
-        # -----------------------------------------------------
-        # 11. Always delete temporary uploaded file
-        # -----------------------------------------------------
-        if temporary_path is not None:
-            temporary_path.unlink(missing_ok=True)
+
+        if temporary_path:
+            try:
+                os.remove(temporary_path)
+
+            except OSError:
+                logger.warning(
+                    "Could not delete temporary upload: %s",
+                    temporary_path,
+                )
+
+        try:
+            await file.close()
+
+        except Exception:
+            logger.warning(
+                "Could not close uploaded file",
+                exc_info=True,
+            )
