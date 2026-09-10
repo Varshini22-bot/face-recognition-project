@@ -25,7 +25,7 @@ def _cors_origins() -> list[str]:
     )
 
     return [
-        origin.strip()
+        origin.strip().rstrip("/")
         for origin in value.split(",")
         if origin.strip()
     ]
@@ -44,8 +44,9 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
+    allow_origin_regex=r"^https:\/\/visionid-murex[a-z0-9-]*\.vercel\.app$",
     allow_credentials=False,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
