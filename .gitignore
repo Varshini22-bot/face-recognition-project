@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+.env
+
+data/registered_faces/*
+data/embeddings/*
+data/*.db
+data/test_images/*
+data/evaluation/*
+
+.vscode/
+.ipynb_checkpoints/
