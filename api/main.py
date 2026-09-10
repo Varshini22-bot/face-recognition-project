@@ -67,22 +67,15 @@ def health() -> dict[str, str]:
 # API routers
 # ============================================================================
 #
-# IMPORTANT:
-# The individual routers already define their own /api paths where needed.
-# Therefore we DO NOT add prefix="/api" here.
-#
-# This prevents routes such as:
-#
-#     /api/api/recognize
-#
-# and correctly exposes:
-#
+# Exposes:
+#     /api/health
 #     /api/recognize
 #     /api/people
 #     /api/people/register
+#     /api/people/{person_id}
 #     /api/evaluation
 #
 
-app.include_router(recognition_router)
-app.include_router(people_router)
-app.include_router(evaluation_router)
+app.include_router(recognition_router, prefix="/api")
+app.include_router(people_router, prefix="/api")
+app.include_router(evaluation_router, prefix="/api")

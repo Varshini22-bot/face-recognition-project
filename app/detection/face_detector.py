@@ -31,7 +31,7 @@ class FaceDetector:
 			raise RuntimeError("This OpenCV build does not provide the YuNet detector API")
 
 		model_file = Path(model_path) if model_path else self._cached_model_path()
-		self._ensure_model(model_file)
+		FaceDetector._ensure_model(model_file)
 		try:
 			self._detector = cv2.FaceDetectorYN_create(str(model_file), "", (0, 0))
 		except Exception as error:
