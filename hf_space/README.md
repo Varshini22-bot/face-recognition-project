@@ -19,7 +19,7 @@ The adapter does not implement a second matcher and does not use DeepFace verifi
 
 ## ZeroGPU compatibility
 
-The adapter includes the current `spaces.GPU` decorator when the `spaces` package is available. TensorFlow/DeepFace/ArcFace must still initialize successfully in the Space runtime; ZeroGPU support is not assumed. If TensorFlow cannot execute in that environment, this experiment must stop rather than replacing the pipeline with a mock or lighter model.
+The adapter includes the current `spaces.GPU` decorator when the Space-provided `spaces` package is available. The Space runtime supplies that package, so it is intentionally not pinned in `requirements.txt`; this avoids conflicting with the Space builder's managed version. TensorFlow/DeepFace/ArcFace must still initialize successfully in the Space runtime; ZeroGPU support is not assumed. If TensorFlow cannot execute in that environment, this experiment must stop rather than replacing the pipeline with a mock or lighter model.
 
 ## Storage limitation
 
