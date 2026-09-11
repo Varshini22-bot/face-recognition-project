@@ -17,9 +17,13 @@ async function parseResponse(response, fallbackMessage) {
   const payload = await response.json().catch(() => null)
   if (response.ok) return payload
 
-  const message = payload?.error?.message || payload?.message || payload?.detail
+  const apiError = payload?.error
+  const message = apiError?.message || payload?.message || payload?.detail
   if (response.status === 413) throw new Error('The uploaded image is too large.')
-  throw new Error(message || fallbackMessage)
+  const error = new Error(message || fallbackMessage)
+  if (apiError?.code) error.code = apiError.code
+  error.status = response.status
+  throw error
 }
 
 export async function apiRequest(path, options = {}, fallbackMessage = 'The API request failed.') {
