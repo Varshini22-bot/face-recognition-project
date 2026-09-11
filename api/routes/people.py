@@ -4,6 +4,8 @@ import asyncio
 import io
 import logging
 import tempfile
+import threading
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import APIRouter, File, Form, UploadFile
@@ -21,8 +23,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def get_registration_workflow():
-	"""Create registration dependencies lazily, after health/docs startup."""
+_registration_workflow_lock = threading.Lock()
+
+
+@lru_cache(maxsize=1)
+def _build_registration_workflow():
+	"""Build registration dependencies once per server process."""
 	from app.config import AppConfig
 	from app.detection.face_detector import FaceDetector
 	from app.embeddings.embedding_generator import EmbeddingGenerator
@@ -37,6 +43,12 @@ def get_registration_workflow():
 		FaceRepository(Database(config.database_path)),
 		config,
 	)
+
+
+def get_registration_workflow():
+	"""Return the process-wide registration workflow safely."""
+	with _registration_workflow_lock:
+		return _build_registration_workflow()
 
 
 def get_repository():
