@@ -1,7 +1,5 @@
 """FastAPI application for local VisionID integration."""
 
-import asyncio
-from contextlib import asynccontextmanager
 import os
 
 from fastapi import FastAPI
@@ -33,36 +31,9 @@ def _cors_origins() -> list[str]:
     ]
 
 
-def _warmup_worker() -> None:
-    """Pre-download and warm up detector and embedding models in a worker thread."""
-    try:
-        from app.detection.face_detector import FaceDetector
-        detector = FaceDetector()
-        import numpy as np
-        dummy = np.zeros((100, 100, 3), dtype=np.uint8)
-        detector.detect_faces(dummy)
-    except Exception:
-        pass
-
-    try:
-        from deepface.modules import modeling
-        modeling.build_model(model_name="ArcFace")
-    except Exception:
-        pass
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan managing background model warmup."""
-    if not (os.environ.get("TESTING") or os.environ.get("PYTEST_CURRENT_TEST")):
-        asyncio.create_task(asyncio.to_thread(_warmup_worker))
-    yield
-
-
 app = FastAPI(
     title="VisionID API",
     version="0.1.0",
-    lifespan=lifespan,
 )
 
 

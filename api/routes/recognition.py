@@ -1,9 +1,10 @@
 import asyncio
 import io
 import logging
-import os
 import tempfile
+import threading
 import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -49,8 +50,12 @@ ALLOWED_CONTENT_TYPES = {
 # Lazy workflow
 # ============================================================================
 
-def get_workflow():
-    """Lazily create the image-recognition workflow."""
+_workflow_lock = threading.Lock()
+
+
+@lru_cache(maxsize=1)
+def _build_workflow():
+    """Build the recognition workflow once per server process."""
     from app.config import AppConfig
     from app.detection.face_detector import FaceDetector
     from app.embeddings.embedding_generator import EmbeddingGenerator
@@ -66,6 +71,12 @@ def get_workflow():
         FaceRepository(Database(config.database_path)),
         EmbeddingMatcher(),
     )
+
+
+def get_workflow():
+    """Return the process-wide workflow, initializing it safely once."""
+    with _workflow_lock:
+        return _build_workflow()
 
 
 # ============================================================================
