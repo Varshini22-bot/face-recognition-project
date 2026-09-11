@@ -5,11 +5,13 @@ colorFrom: blue
 colorTo: indigo
 sdk: gradio
 sdk_version: 5.49.1
-app_file: app.py
+app_file: hf_app.py
 pinned: false
 ---
 
 # VisionID on Hugging Face Spaces
+
+The Space entrypoint is `hf_app.py`. It is intentionally named differently from the `app/` package so imports such as `from app.config import AppConfig` resolve to the package rather than a root-level `app.py` module.
 
 This Space is a Gradio adapter around the existing VisionID implementation. It preserves the required pipeline:
 
