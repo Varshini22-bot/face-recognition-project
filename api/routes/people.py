@@ -106,6 +106,7 @@ async def register_person(
 	if suffix not in ALLOWED_SUFFIXES:
 		suffix = ".png"
 	temporary_path: Path | None = None
+	logger.info("registration_stage=request_received name_present=%s content_type=%s", bool(name.strip()), file.content_type)
 	try:
 		content = await file.read(MAX_UPLOAD_BYTES + 1)
 		if not content:
@@ -121,8 +122,10 @@ async def register_person(
 		with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as temporary:
 			temporary.write(content)
 			temporary_path = Path(temporary.name)
+		logger.info("registration_stage=temporary_image_saved bytes=%d suffix=%s", len(content), suffix)
 		try:
 			result = await asyncio.to_thread(get_registration_workflow().register, name, temporary_path)
+			logger.info("registration_stage=person_stored person_id=%s", result.person.id)
 		except RegistrationError as error:
 			if isinstance(error, NoFaceDetectedError):
 				return _error("NO_FACE", "Registration requires exactly one visible face.", 400)
