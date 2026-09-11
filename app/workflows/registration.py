@@ -77,9 +77,16 @@ class RegistrationWorkflow:
 			)
 
 		face_x, face_y, face_width, face_height = faces[0]
-		face_crop = image[face_y : face_y + face_height, face_x : face_x + face_width]
-		if face_crop.size == 0:
+		image_height, image_width = image.shape[:2]
+		left = max(0, face_x)
+		top = max(0, face_y)
+		right = min(image_width, face_x + face_width)
+		bottom = min(image_height, face_y + face_height)
+		if right <= left or bottom <= top:
 			raise InvalidRegistrationImageError("Detected face has an invalid image region")
+		face_crop = image[top:bottom, left:right]
+		if face_crop.size == 0:
+			raise InvalidRegistrationImageError("Detected face has an empty image region")
 		try:
 			embedding = self._embedding_generator.generate_embedding(
 				face_crop, detected_face=True

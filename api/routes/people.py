@@ -18,6 +18,12 @@ from api.routes.recognition import (
 	MAX_UPLOAD_BYTES,
 )
 from api.schemas import DeleteResponse, ErrorResponse, PeopleResponse, PersonResponse, RegistrationResponse
+from app.workflows.registration import (
+    InvalidRegistrationImageError,
+    MultipleFacesDetectedError,
+    NoFaceDetectedError,
+    RegistrationError,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -117,21 +123,21 @@ async def register_person(
 			temporary_path = Path(temporary.name)
 		try:
 			result = await asyncio.to_thread(get_registration_workflow().register, name, temporary_path)
-		except Exception as error:
-			message = str(error)
-			if "already registered" in message.lower():
-				return _error("DUPLICATE_PERSON", "That person name is already registered.", 409)
-			if "no face" in message.lower():
+		except RegistrationError as error:
+			if isinstance(error, NoFaceDetectedError):
 				return _error("NO_FACE", "Registration requires exactly one visible face.", 400)
-			if "multiple" in message.lower() or "exactly one" in message.lower():
+			if isinstance(error, MultipleFacesDetectedError):
 				return _error("MULTIPLE_FACES", "Registration requires exactly one visible face.", 400)
-			if "image" in message.lower() or "read" in message.lower():
+			if isinstance(error, InvalidRegistrationImageError):
 				return _error("INVALID_IMAGE", "The uploaded image could not be processed.", 400)
-			raise
+			if "already registered" in str(error).lower():
+				return _error("DUPLICATE_PERSON", "That person name is already registered.", 409)
+			logger.warning("Registration rejected: %s", error, exc_info=True)
+			return _error("EMBEDDING_GENERATION_FAILED", "The face embedding could not be generated.", 422)
+		except Exception:
+			logger.exception("Registration request failed")
+			return _error("REGISTRATION_ERROR", "Unable to register this person.", 500)
 		return RegistrationResponse(person=_person_response(result.person))
-	except Exception:
-		logger.exception("Registration request failed")
-		return _error("REGISTRATION_ERROR", "Unable to register this person.", 500)
 	finally:
 		if temporary_path is not None:
 			temporary_path.unlink(missing_ok=True)
