@@ -339,7 +339,13 @@ FastAPI provides automated documentation out of the box:
 
 ---
 
-## 19. Environment Variables
+## 19. Hugging Face ZeroGPU Demo Adapter
+
+The `hf_space/` directory contains a Gradio adapter for a Hugging Face Space. It calls the existing VisionID workflows and preserves YuNet, DeepFace ArcFace, 512-dimensional embeddings, SQLite storage, cosine matching, and the authoritative 0.50 threshold. It does not introduce a second recognition implementation or mock results.
+
+The Space is a sample/demo deployment. Free Space storage is not production-persistent, so SQLite registrations may be lost after rebuilds or lifecycle events. TensorFlow/DeepFace/ArcFace compatibility with the Space's ZeroGPU runtime must be verified at runtime; a successful build alone is not acceptance. If model initialization or inference fails, use the documented blocker rather than replacing the required pipeline.
+
+## 20. Environment Variables
 
 | Variable | Scope | Description | Default |
 |---|---|---|---|
