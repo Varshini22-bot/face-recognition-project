@@ -2,6 +2,13 @@
 
 import os
 
+# Render's smallest instances have limited CPU and memory. Keep TensorFlow's
+# thread pools bounded before any route imports can initialize DeepFace.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
+os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
