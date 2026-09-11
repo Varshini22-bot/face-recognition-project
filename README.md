@@ -139,12 +139,12 @@ The evaluation suite was executed against a curated local test dataset (`scripts
 | **Faces Evaluated** | 6 | 6 |
 | **Known Samples** | 3 | 3 |
 | **Unknown Samples** | 3 | 3 |
-| **Accuracy** | **83.3%** | **100.0%** |
-| **Precision** | **100.0%** | **100.0%** |
-| **Recall** | **66.7%** | **100.0%** |
-| **F1 Score** | **80.0%** | **100.0%** |
-| **False Acceptance Rate (FAR)** | **0.0%** | **0.0%** |
-| **False Rejection Rate (FRR)** | **33.3%** | **0.0%** |
+| **Accuracy** | **Not treated as a production benchmark** | **Not treated as a production benchmark** |
+| **Precision** | **Not treated as a production benchmark** | **Not treated as a production benchmark** |
+| **Recall** | **Not treated as a production benchmark** | **Not treated as a production benchmark** |
+| **F1 Score** | **Not treated as a production benchmark** | **Not treated as a production benchmark** |
+| **False Acceptance Rate (FAR)** | **Not treated as a production benchmark** | **Not treated as a production benchmark** |
+| **False Rejection Rate (FRR)** | **Not treated as a production benchmark** | **Not treated as a production benchmark** |
 
 ### Evaluation Diagnostics & Failure Case Analysis
 1. **Difficult Image Failure Case**:
@@ -175,7 +175,7 @@ The evaluation suite was executed against a curated local test dataset (`scripts
 - **Dataset Size**: The current evaluation set is compact and serves for proof-of-concept verification.
 - **Single Reference Enrollment**: Currently, one reference crop is stored per identity. Variation in lighting or aging is not yet modeled via multiple centroids.
 - **Dataset-Dependent Threshold**: The optimal threshold ($0.30$ vs. default $0.50$) depends on camera quality, resolution, and domain conditions.
-- **SQLite / Local Filesystem**: Designed for local development and demonstration. Production deployment requires a managed database (e.g. PostgreSQL) and object storage (e.g. S3).
+- **SQLite / Local Filesystem**: The current deployment uses SQLite and local uploaded images. On Render, the filesystem is ephemeral, so records and uploads can reset after restart or redeploy; managed database and object storage are future production improvements.
 - **Cold Starts & Ephemeral Storage on Render Free Tier**:
   - The free-tier container spins down after inactivity; initial requests may take 30–60 seconds.
   - The local container filesystem is ephemeral; SQLite databases reset upon server restart or redeploy.
