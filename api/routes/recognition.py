@@ -1,3 +1,4 @@
+import asyncio
 import io
 import logging
 import os
@@ -144,7 +145,7 @@ async def recognize(
 
         started = time.perf_counter()
         workflow = get_workflow()
-        report = workflow.recognize(temporary_path)
+        report = await asyncio.to_thread(workflow.recognize, temporary_path)
         elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
 
         matcher = getattr(workflow, "_matcher", None)

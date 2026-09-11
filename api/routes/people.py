@@ -1,5 +1,6 @@
 """Registered-people management API routes."""
 
+import asyncio
 import io
 import logging
 import tempfile
@@ -103,7 +104,7 @@ async def register_person(
 			temporary.write(content)
 			temporary_path = Path(temporary.name)
 		try:
-			result = get_registration_workflow().register(name, temporary_path)
+			result = await asyncio.to_thread(get_registration_workflow().register, name, temporary_path)
 		except Exception as error:
 			message = str(error)
 			if "already registered" in message.lower():
