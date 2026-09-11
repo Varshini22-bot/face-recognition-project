@@ -51,12 +51,37 @@ def test_similarity_below_threshold_is_unknown() -> None:
 
 
 def test_similarity_at_threshold_is_recognized() -> None:
-	result = EmbeddingMatcher(SimilarityThreshold(0.8)).match(
+	result = EmbeddingMatcher(SimilarityThreshold(0.50)).match(
 		np.array([1.0, 0.0]),
-		[EmbeddingCandidate(1, "Ada", np.array([0.8, 0.6], dtype=np.float64))],
+		[EmbeddingCandidate(1, "Ada", np.array([0.50, 0.8660254], dtype=np.float64))],
 	)
 
 	assert result.recognized is True
+
+
+def test_dissimilar_embeddings_are_not_recognized() -> None:
+	result = EmbeddingMatcher(SimilarityThreshold(0.50)).match(
+		np.array([1.0, 0.0]),
+		[candidate(1, "Ada", [0.0, 1.0])],
+	)
+
+	assert result.recognized is False
+	assert result.name is None
+	assert result.similarity == pytest.approx(0.0)
+
+
+def test_invalid_empty_embedding_is_rejected() -> None:
+	with pytest.raises(MatchingError, match="non-empty"):
+		EmbeddingMatcher().match(np.array([], dtype=np.float32), [])
+
+
+def test_invalid_non_finite_embedding_is_rejected() -> None:
+	with pytest.raises(MatchingError, match="finite"):
+		cosine_similarity(np.array([np.nan]), np.array([1.0]))
+
+
+def test_default_threshold_is_0_50() -> None:
+	assert SimilarityThreshold().value == pytest.approx(0.50)
 
 
 def test_similarity_above_threshold_is_recognized() -> None:

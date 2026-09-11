@@ -172,7 +172,7 @@ async def recognize(
                 name=getattr(face, "name", None),
                 similarity=getattr(face, "similarity", None),
                 threshold=threshold,
-                status="known" if getattr(face, "recognized", False) else "unknown",
+                status="Known" if getattr(face, "recognized", False) else "Unknown",
             )
             for face in getattr(report, "faces", [])
         ]
