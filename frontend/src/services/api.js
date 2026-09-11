@@ -1,5 +1,9 @@
 function getApiBaseUrl() {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '')
+  const isLocalBaseUrl = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBaseUrl || '')
+
+  // Never ship a local development URL into a deployed browser bundle.
+  if (import.meta.env.PROD && isLocalBaseUrl) return '/api'
   if (configuredBaseUrl) return configuredBaseUrl
   if (import.meta.env.DEV) return 'http://127.0.0.1:8000'
   return '/api'
