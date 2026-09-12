@@ -48,7 +48,10 @@ class FaceDetector:
 
 	@staticmethod
 	def _cached_model_path() -> Path:
-		return Path.home() / ".deepface" / "weights" / YUNET_MODEL_NAME
+		bundled_model = Path(__file__).resolve().parents[2] / "models" / YUNET_MODEL_NAME
+		if bundled_model.is_file():
+			return bundled_model
+		return Path("/tmp/visionid/models") / YUNET_MODEL_NAME
 
 	@staticmethod
 	def _ensure_model(model_path: Path) -> None:

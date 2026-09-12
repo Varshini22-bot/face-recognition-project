@@ -1,5 +1,5 @@
-models/*.onnx
 tests/
 data/
 README.md
 v0_plans/
+models/arcfaceresnet100-11-int8.onnx
