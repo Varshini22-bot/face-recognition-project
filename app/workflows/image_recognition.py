@@ -62,17 +62,21 @@ class ImageRecognitionWorkflow:
 		if not input_path.is_file():
 			raise ImageRecognitionError(f"Image does not exist: {input_path}")
 		try:
-			image, boxes = self._detector.detect_image(input_path)
+			image, _ = self._detector.detect_image(input_path)
+			detections = self._detector.detect_face_details(image)
 		except (OSError, ValueError) as error:
 			raise ImageRecognitionError(str(error)) from error
 
 		people = self._repository.get_all_people()
 		face_results: list[FaceRecognitionResult] = []
-		for box in boxes:
+		for detection in detections:
+			box = detection.box
 			crop = self._crop_face(image, box)
+			x, y, _, _ = box
+			landmarks = detection.landmarks - np.array([max(0, x), max(0, y)], dtype=np.float32)
 			try:
 				embedding = self._embedding_generator.generate_embedding(
-					crop, detected_face=True
+					crop, detected_face=True, landmarks=landmarks
 				)
 				match = self._matcher.match(embedding, people)
 			except Exception as error:

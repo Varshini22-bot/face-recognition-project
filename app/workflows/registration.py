@@ -66,7 +66,8 @@ class RegistrationWorkflow:
 			raise InvalidRegistrationImageError(f"Image does not exist: {input_path}")
 
 		try:
-			image, faces = self._detector.detect_image(input_path)
+			image, _ = self._detector.detect_image(input_path)
+			faces = self._detector.detect_face_details(image)
 		except (OSError, ValueError) as error:
 			raise InvalidRegistrationImageError(str(error)) from error
 		if len(faces) == 0:
@@ -76,7 +77,7 @@ class RegistrationWorkflow:
 				f"Detected {len(faces)} faces; registration requires exactly one face"
 			)
 
-		face_x, face_y, face_width, face_height = faces[0]
+		face_x, face_y, face_width, face_height = faces[0].box
 		image_height, image_width = image.shape[:2]
 		left = max(0, face_x)
 		top = max(0, face_y)
@@ -89,7 +90,7 @@ class RegistrationWorkflow:
 			raise InvalidRegistrationImageError("Detected face has an empty image region")
 		try:
 			embedding = self._embedding_generator.generate_embedding(
-				face_crop, detected_face=True
+				face_crop, detected_face=True, landmarks=faces[0].landmarks - np.array([left, top], dtype=np.float32)
 			)
 		except Exception as error:
 			raise RegistrationError("Could not generate an embedding for the face") from error

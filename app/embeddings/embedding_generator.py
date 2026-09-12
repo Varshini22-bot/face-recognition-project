@@ -9,6 +9,7 @@ import numpy as np
 
 
 ImageInput: TypeAlias = str | Path | np.ndarray
+LandmarksInput: TypeAlias = np.ndarray | list[tuple[float, float]] | None
 
 MODEL_NAME = "arcfaceresnet100-8.onnx"
 MODEL_URL = (
@@ -61,14 +62,23 @@ class EmbeddingGenerator:
         self._input_name = inputs[0].name
         self._output_name = outputs[0].name
 
-    def generate_embedding(self, image: ImageInput, detected_face: bool = False) -> np.ndarray:
-        """Return one finite, L2-normalized float32 ArcFace embedding."""
+    def generate_embedding(
+        self,
+        image: ImageInput,
+        detected_face: bool = False,
+        landmarks: LandmarksInput = None,
+    ) -> np.ndarray:
+        """Return one finite, L2-normalized ArcFace embedding."""
+
         self._validate_image_input(image)
         if not detected_face:
             raise FaceNotDetectedError("EmbeddingGenerator requires a detected single-face crop")
         crop = self._prepare_detected_face(image)
+        if landmarks is not None:
+            crop = self._align_face(crop, landmarks)
         resized = cv2.resize(crop, self.INPUT_SIZE, interpolation=cv2.INTER_LINEAR)
         # The ONNX Model Zoo ArcFace preprocessing uses BGR pixels and (x - 127.5) / 128.
+
         tensor = resized.astype(np.float32).transpose(2, 0, 1)[None, ...]
         tensor = (tensor - 127.5) / 128.0
         try:
@@ -123,7 +133,24 @@ class EmbeddingGenerator:
         return image
 
     @staticmethod
+    def _align_face(image: np.ndarray, landmarks: LandmarksInput) -> np.ndarray:
+        points = np.asarray(landmarks, dtype=np.float32).reshape(-1, 2)
+        if points.shape != (5, 2) or not np.isfinite(points).all():
+            raise ValueError("ArcFace alignment requires five finite facial landmarks")
+        target = np.array(
+            [[38.2946, 51.6963], [73.5318, 51.5014], [56.0252, 71.7366],
+             [41.5493, 92.3655], [70.7299, 92.2041]],
+            dtype=np.float32,
+        )
+        matrix, _ = cv2.estimateAffinePartial2D(points, target, method=cv2.LMEDS)
+        if matrix is None:
+            raise ValueError("Could not estimate ArcFace alignment transform")
+        return cv2.warpAffine(image, matrix, (112, 112), borderMode=cv2.BORDER_REPLICATE)
+
+    @staticmethod
     def _validate_image_input(image: ImageInput) -> None:
+
+
         if isinstance(image, (str, Path)):
             if not Path(image).is_file():
                 raise FileNotFoundError(f"Could not read image: {image}")
