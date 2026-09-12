@@ -2,10 +2,10 @@ function getApiBaseUrl() {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '')
   const isLocalBaseUrl = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBaseUrl || '')
 
-  // Always use the same-origin proxy in production. This avoids CORS failures
-  // when the app is opened through any Vercel deployment alias or custom domain.
-  if (import.meta.env.PROD) return '/api'
+  // The frontend is deployed separately from FastAPI, so production must use
+  // the explicitly configured backend URL. Keep same-origin as a proxy fallback.
   if (configuredBaseUrl && !isLocalBaseUrl) return configuredBaseUrl
+  if (import.meta.env.PROD) return '/api'
   return 'http://127.0.0.1:8000'
 }
 
