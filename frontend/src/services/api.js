@@ -1,11 +1,13 @@
+const DEPLOYED_API_BASE_URL = 'https://visionid-api.vercel.app'
+
 function getApiBaseUrl() {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '')
   const isLocalBaseUrl = /^(https?:\/\/)?(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredBaseUrl || '')
 
-  // The frontend is deployed separately from FastAPI, so production must use
-  // the explicitly configured backend URL. Keep same-origin as a proxy fallback.
+  // Use the billing-free deployed FastAPI service when Vercel preview variables
+  // are missing or still point at a stale deployment.
   if (configuredBaseUrl && !isLocalBaseUrl) return configuredBaseUrl
-  if (import.meta.env.PROD) return '/api'
+  if (import.meta.env.PROD) return DEPLOYED_API_BASE_URL
   return 'http://127.0.0.1:8000'
 }
 
