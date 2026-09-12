@@ -1,3 +1,4 @@
+import React from 'react'
 import { Camera, CircleDot, Fingerprint, ScanFace, ShieldCheck } from 'lucide-react'
 
 const stages = [
