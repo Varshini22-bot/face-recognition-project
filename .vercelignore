@@ -1,5 +1,4 @@
 models/*.onnx
-frontend/
 tests/
 data/
 README.md
