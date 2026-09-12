@@ -11,3 +11,4 @@ data/evaluation/*
 
 .vscode/
 .ipynb_checkpoints/
+models/*.onnx

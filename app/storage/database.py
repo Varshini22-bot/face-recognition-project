@@ -3,7 +3,7 @@
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import Any, AsyncIterator
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import asyncpg
