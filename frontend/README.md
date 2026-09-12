@@ -5,7 +5,7 @@ The frontend is a React/Vite dashboard for the existing Python face-recognition 
 ## API routing
 
 - Local development uses `VITE_API_BASE_URL` when set, otherwise `http://127.0.0.1:8000`.
-- Production uses same-origin `/api` requests, which `vercel.json` rewrites to the deployed Render backend.
+- Production uses the Cloudflare Quick Tunnel configured in `VITE_API_BASE_URL`.
 - The service layer owns route normalization, multipart uploads, and consistent error messages.
 
 ## Commands

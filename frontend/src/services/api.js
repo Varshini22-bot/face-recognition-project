@@ -1,4 +1,4 @@
-const DEPLOYED_API_BASE_URL = 'https://visionid-api.vercel.app'
+const DEPLOYED_API_BASE_URL = 'https://prediction-titled-advantage-yrs.trycloudflare.com'
 
 function getApiBaseUrl() {
   const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/+$/, '')
