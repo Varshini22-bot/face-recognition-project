@@ -3,9 +3,11 @@
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator
+from typing import Any
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import asyncpg
+
 
 
 SCHEMA = """
@@ -36,9 +38,22 @@ class Database:
         async with self.connection() as connection:
             await connection.execute(SCHEMA)
 
+    @staticmethod
+    def _connection_options(database_url: str) -> tuple[str, dict[str, object]]:
+        parsed = urlsplit(database_url)
+        query = dict(parse_qsl(parsed.query, keep_blank_values=True))
+        sslmode = query.pop("sslmode", None)
+        query.pop("channel_binding", None)
+        normalized_url = urlunsplit(parsed._replace(query=urlencode(query)))
+        options: dict[str, object] = {}
+        if sslmode and sslmode != "disable":
+            options["ssl"] = "require"
+        return normalized_url, options
+
     @asynccontextmanager
     async def connection(self) -> AsyncIterator[asyncpg.Connection]:
-        connection = await asyncpg.connect(self.database_url)
+        normalized_url, options = self._connection_options(self.database_url)
+        connection = await asyncpg.connect(normalized_url, **options)
         try:
             yield connection
         finally:

@@ -2,8 +2,7 @@
 
 import os
 
-# Render's smallest instances have limited CPU and memory. Keep TensorFlow's
-# thread pools bounded before any route imports can initialize DeepFace.
+# Keep TensorFlow's thread pools bounded before route imports initialize DeepFace.
 os.environ.setdefault("OMP_NUM_THREADS", "1")
 os.environ.setdefault("TF_NUM_INTRAOP_THREADS", "1")
 os.environ.setdefault("TF_NUM_INTEROP_THREADS", "1")
@@ -23,7 +22,7 @@ def _cors_origins() -> list[str]:
     Read allowed frontend origins from the environment.
 
     For local development, allow the Vite development server.
-    For production, Render should use:
+    For production, configure the deployed frontend origin with:
 
         VISIONID_CORS_ORIGINS=https://visionid-murex.vercel.app
     """
@@ -82,7 +81,7 @@ def readiness() -> dict[str, object]:
         "status": "ready",
         "service": "VisionID API",
         "storage": {
-            "database_parent": str(config.database_path.parent),
+            "database": "neon",
             "registered_faces_dir": str(config.registered_faces_dir),
         },
     }
