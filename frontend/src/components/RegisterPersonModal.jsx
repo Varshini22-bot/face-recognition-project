@@ -1,5 +1,5 @@
 import { Check, ImagePlus, LoaderCircle, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 export default function RegisterPersonModal({ open, loading, error, onClose, onSubmit }) {
   const [name, setName] = useState('')

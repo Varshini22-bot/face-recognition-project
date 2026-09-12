@@ -1,5 +1,5 @@
 import { ArrowUpRight, BarChart3, Check, Database, FileUp, Gauge, Layers3, Play, ShieldCheck, Sparkles, UsersRound } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Navbar from './components/Navbar.jsx'
 import Pipeline from './components/Pipeline.jsx'
 import RecognitionResult from './components/RecognitionResult.jsx'
