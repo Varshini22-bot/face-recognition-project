@@ -149,7 +149,7 @@ function App() {
             <div className="pipeline-panel panel-surface">
               <div className="panel-heading"><div><strong>Processing pipeline</strong><span>Each stage reflects the local recognition architecture.</span></div><span className="panel-live"><i /> IDLE</span></div>
               <Pipeline activeStage={activeStage} onStageChange={setActiveStage} />
-              <div className="pipeline-detail"><span className="detail-number">0{activeStage + 1}</span><div><strong>{['Input is ready when you are.', 'YuNet will locate faces in the frame.', 'ArcFace will create a 512-dimensional representation.', 'Cosine similarity will rank registered candidates.', 'The configured threshold will decide known or unknown.'][activeStage]}</strong><span>Live requests are routed through the Vercel proxy to the Render recognition engine.</span></div></div>
+              <div className="pipeline-detail"><span className="detail-number">0{activeStage + 1}</span><div><strong>{['Input is ready when you are.', 'YuNet will locate faces in the frame.', 'ArcFace will create a 512-dimensional representation.', 'Cosine similarity will rank registered candidates.', 'The configured threshold will decide known or unknown.'][activeStage]}</strong><span>Live requests are routed through the VisionID API service.</span></div></div>
             </div>
             <RecognitionResult file={selectedFile} previewUrl={previewUrl} result={recognitionResult} loading={loading} error={recognitionError} onRecognize={recognizeSelectedImage} onUpload={() => fileInput.current?.click()} />
           </div>
