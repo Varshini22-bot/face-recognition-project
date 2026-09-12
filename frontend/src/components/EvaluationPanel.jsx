@@ -1,3 +1,4 @@
+import React from 'react'
 import { BarChart3, LoaderCircle } from 'lucide-react'
 
 const metricLabels = [['accuracy', 'Accuracy'], ['precision', 'Precision'], ['recall', 'Recall'], ['f1', 'F1'], ['far', 'FAR'], ['frr', 'FRR']]
