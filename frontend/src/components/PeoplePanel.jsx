@@ -1,3 +1,4 @@
+import React from 'react'
 import { LoaderCircle, Trash2, UserPlus, UsersRound } from 'lucide-react'
 
 export default function PeoplePanel({ people, loading, error, onRegister, onDelete }) {
