@@ -12,12 +12,12 @@ import numpy as np
 ImageInput: TypeAlias = str | Path | np.ndarray
 LandmarksInput: TypeAlias = np.ndarray | list[tuple[float, float]] | None
 
-MODEL_NAME = "arcfaceresnet100-11-int8.onnx"
+MODEL_NAME = "arcfaceresnet100-8.onnx"
 MODEL_URL = (
-    "https://github.com/onnx/models/raw/main/validated/vision/body_analysis/"
-    "arcfaceresnet100/model/arcfaceresnet100-11-int8.onnx"
+    "https://huggingface.co/onnxmodelzoo/arcfaceresnet100/resolve/main/"
+    f"{MODEL_NAME}"
 )
-MODEL_SHA256 = "c625ca68a422418c48aa84f73341337e0a92b111f327909005d1eec07c95f936"
+MODEL_SHA256 = "f3a6bc281e72f88862f5748b53be3d76b3b48f8f1ab1f4a537941bdc4e1b01da"
 
 
 class EmbeddingGenerationError(RuntimeError):

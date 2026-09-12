@@ -10,5 +10,6 @@ data/test_images/*
 data/evaluation/*
 
 .vscode/
-models/arcfaceresnet100-8.onnx
 .ipynb_checkpoints/
+
+models/arcfaceresnet100-8.onnx

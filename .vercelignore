@@ -2,4 +2,3 @@ tests/
 data/
 README.md
 v0_plans/
-models/arcfaceresnet100-8.onnx
