@@ -1,6 +1,6 @@
 # VisionID — Face Recognition Identification System
 
-VisionID is a robust, explainable facial recognition and identity management system built with Python, FastAPI, OpenCV YuNet, DeepFace ArcFace, and React. The system handles enrollment, facial embedding generation, vector matching, known/unknown identity decisions, and evaluation reporting.
+VisionID is a robust, explainable facial recognition and identity management system built with Python, FastAPI, OpenCV YuNet, ONNX Runtime ArcFace, and React. The system handles enrollment, facial embedding generation, vector matching, known/unknown identity decisions, and evaluation reporting.
 
 ---
 
@@ -20,7 +20,7 @@ VisionID provides an end-to-end computer vision workspace that:
 
 This system was designed and developed for the **Code Nimbus AI/ML Intern** technical assessment. It satisfies all core requirements:
 - **Face Detection**: Fast, robust face localization via OpenCV YuNet.
-- **Face Representation**: High-accuracy deep embeddings using DeepFace ArcFace.
+- **Face Representation**: High-accuracy 512-dimensional embeddings using the Apache-2.0 ONNX Model Zoo ArcFace model.
 - **Similarity Matching**: Normalized cosine similarity ranking.
 - **Unknown Face Rejection**: Strict threshold-based gating to prevent forced false positives.
 - **Evaluation Framework**: Offline evaluation pipeline computing Accuracy, Precision, Recall, F1, FAR, and FRR.
@@ -56,7 +56,7 @@ Input Image / Webcam Stream
     Face Bounding Box & Crop
            │
            ▼
-   DeepFace ArcFace Model
+    ONNX Runtime ArcFace Model
            │
            ▼
    512-D Normalized Embedding
@@ -83,10 +83,10 @@ Input Image / Webcam Stream
 | Component | Technology | Model / Artifact | Embedding Size | Function |
 |---|---|---|---|---|
 | **Face Detection** | OpenCV DNN | `face_detection_yunet_2023mar.onnx` | N/A | Localizes face bounding boxes `(x, y, w, h)` |
-| **Face Representation** | DeepFace | ArcFace | 512 float32 | Extracts discriminative identity representations |
+| **Face Representation** | ONNX Runtime | `arcfaceresnet100-8.onnx` | 512 float32 | Extracts discriminative identity representations |
 | **Similarity Metric** | NumPy | Cosine Similarity | Scalar $[-1, 1]$ | Measures angular vector alignment |
 
-> **Note on Model Selection**: The project intentionally uses **YuNet** (lightweight, native OpenCV ONNX detector) and **ArcFace** (state-of-the-art angular margin loss embeddings). The codebase does **not** use Haar Cascades, MTCNN, FaceNet, or landmark-mesh models, keeping inference fast and dependencies lean.
+> **Note on Model Selection**: The project intentionally uses **YuNet** and the Apache-2.0 `arcfaceresnet100-8.onnx` ArcFace model from the official ONNX Model Zoo successor at https://huggingface.co/onnxmodelzoo/arcfaceresnet100-8. The verified model contract is input `data` `[1, 3, 112, 112]` and output `fc1` `[1, 512]`; SHA-256 is `f3a6bc281e72f88862f5748b53be3d76b3b48f8f1ab1f4a537941bdc4e1b01da`. The codebase does **not** use Haar Cascades, MTCNN, FaceNet, or landmark-mesh models, keeping inference fast and dependencies lean.
 
 ---
 
@@ -95,7 +95,7 @@ Input Image / Webcam Stream
 For each uploaded image or video frame:
 1. **Detect Faces**: The image is passed to YuNet (`cv2.FaceDetectorYN`) to detect all visible face boxes.
 2. **Crop Faces**: Each detected box is validated and cropped from the image.
-3. **Generate ArcFace Embedding**: Each face crop is converted to RGB and processed through DeepFace ArcFace (`normalization="ArcFace"`), yielding a 512-dimensional float32 vector.
+3. **Generate ArcFace Embedding**: Each YuNet face crop is resized to 112×112, normalized with `(pixel - 127.5) / 128.0`, passed through ONNX Runtime using the verified BGR NCHW contract, and L2-normalized into a 512-dimensional float32 vector.
 4. **Compare Candidates**: The query vector is compared against every registered identity vector stored in SQLite using cosine similarity:
    $$\text{similarity} = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\| \|\mathbf{v}\|}$$
 5. **Rank & Select**: The candidate with the highest similarity score is selected.
@@ -179,7 +179,7 @@ The evaluation suite was executed against a curated local test dataset (`scripts
 - **Cold Starts & Ephemeral Storage on Render Free Tier**:
   - The free-tier container spins down after inactivity; initial requests may take 30–60 seconds.
   - The local container filesystem is ephemeral; SQLite databases reset upon server restart or redeploy.
-- **Initial Model Download**: First-time initialization requires downloading the YuNet ONNX weights (~350 KB) and DeepFace weights.
+- **Initial Model Download**: First-time initialization downloads the YuNet ONNX detector and the 249 MB ArcFace ONNX model to the writable runtime cache when they are not bundled.
 - **Webcam Scope**: Browser webcam captures client-side still frames sent to `/api/recognize`, whereas local webcam streaming uses `cv2.VideoCapture` via `scripts/recognize_webcam.py`.
 - **Free-Tier Deployment**: The hosted deployment is intended for technical demonstration purposes.
 
@@ -339,7 +339,13 @@ FastAPI provides automated documentation out of the box:
 
 ---
 
-## 19. Environment Variables
+## 19. Hugging Face ZeroGPU Demo Adapter
+
+The `hf_space/` directory contains a Gradio adapter for a Hugging Face Space. It calls the existing VisionID workflows and preserves YuNet, DeepFace ArcFace, 512-dimensional embeddings, SQLite storage, cosine matching, and the authoritative 0.50 threshold. It does not introduce a second recognition implementation or mock results.
+
+The Space is a sample/demo deployment. Free Space storage is not production-persistent, so SQLite registrations may be lost after rebuilds or lifecycle events. TensorFlow/DeepFace/ArcFace compatibility with the Space's ZeroGPU runtime must be verified at runtime; a successful build alone is not acceptance. If model initialization or inference fails, use the documented blocker rather than replacing the required pipeline.
+
+## 20. Environment Variables
 
 | Variable | Scope | Description | Default |
 |---|---|---|---|

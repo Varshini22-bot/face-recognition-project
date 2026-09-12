@@ -1,7 +1,6 @@
 """Face detection using OpenCV YuNet, the detector used by DeepFace."""
 
 from pathlib import Path
-from dataclasses import dataclass
 from typing import TypeAlias
 from urllib.request import urlopen
 
@@ -10,13 +9,6 @@ import numpy as np
 
 
 FaceBox: TypeAlias = tuple[int, int, int, int]
-FaceLandmarks: TypeAlias = np.ndarray
-
-
-@dataclass(frozen=True)
-class FaceDetection:
-	box: FaceBox
-	landmarks: FaceLandmarks
 YUNET_MODEL_NAME = "face_detection_yunet_2023mar.onnx"
 YUNET_MODEL_URL = (
 	"https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/"
@@ -67,10 +59,6 @@ class FaceDetector:
 
 	def detect_faces(self, image: np.ndarray) -> list[FaceBox]:
 		"""Return face boxes as ``(x, y, width, height)`` tuples."""
-		return [detection.box for detection in self.detect_face_details(image)]
-
-	def detect_face_details(self, image: np.ndarray) -> list[FaceDetection]:
-		"""Return YuNet boxes and its five facial landmarks."""
 		if image is None or image.size == 0:
 			raise ValueError("image must be a non-empty NumPy array")
 		if image.ndim not in (2, 3):
@@ -84,13 +72,7 @@ class FaceDetector:
 		_, detected = self._detector.detect(image)
 		if detected is None:
 			return []
-		return [
-			FaceDetection(
-				box=tuple(map(int, face[:4])),
-				landmarks=np.asarray(face[4:14], dtype=np.float32).reshape(5, 2),
-			)
-			for face in detected
-		]
+		return [tuple(map(int, face[:4])) for face in detected]
 
 	@staticmethod
 	def draw_boxes(

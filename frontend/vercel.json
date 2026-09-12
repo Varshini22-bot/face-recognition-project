@@ -1,8 +1,1 @@
-{
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://face-recognition-project-lp1j.onrender.com/api/:path*"
-    }
-  ]
-}
+{}

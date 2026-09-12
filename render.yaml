@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: visionid-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    autoDeploy: false
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: OMP_NUM_THREADS
+        value: 1
+      - key: TF_NUM_INTRAOP_THREADS
+        value: 1
+      - key: TF_NUM_INTEROP_THREADS
+        value: 1
+      - key: TF_CPP_MIN_LOG_LEVEL
+        value: 2
+      - key: VISIONID_CORS_ORIGINS
+        value: https://visionid-murex.vercel.app
+      - key: FACE_RECOGNITION_DB_PATH
+        value: /app/data/face_recognition.db
+      - key: REGISTERED_FACES_DIR
+        value: /app/data/registered_faces

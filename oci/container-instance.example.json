@@ -1,0 +1,55 @@
+{
+  "compartmentId": "<OCI_COMPARTMENT_OCID>",
+  "displayName": "visionid-ml-api",
+  "availabilityDomain": "<OCI_AVAILABILITY_DOMAIN>",
+  "shape": "CI.Standard.E4.Flex",
+  "shapeConfig": {
+    "ocpus": 2,
+    "memoryInGBs": 8
+  },
+  "containers": [
+    {
+      "displayName": "visionid-api",
+      "imageUrl": "<OCIR_IMAGE_URL>",
+      "environmentVariables": {
+        "PORT": "8000",
+        "VISIONID_CORS_ORIGINS": "https://visionid-murex.vercel.app",
+        "VISIONID_DATABASE_PATH": "/app/data/visionid.db",
+        "VISIONID_REGISTERED_FACES_DIR": "/app/data/registered_faces",
+        "OMP_NUM_THREADS": "1",
+        "TF_NUM_INTRAOP_THREADS": "1",
+        "TF_NUM_INTEROP_THREADS": "1",
+        "TF_CPP_MIN_LOG_LEVEL": "2"
+      },
+      "containerCommand": [
+        "sh",
+        "-c",
+        "exec uvicorn api.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1 --timeout-keep-alive 5"
+      ],
+      "healthChecks": [
+        {
+          "name": "visionid-ready",
+          "healthCheckType": "HTTP",
+          "initialDelayInSeconds": 60,
+          "intervalInSeconds": 30,
+          "failureAction": "RESTART",
+          "failureThreshold": 3,
+          "successThreshold": 1,
+          "timeoutInSeconds": 10,
+          "path": "/api/ready",
+          "port": 8000
+        }
+      ]
+    }
+  ],
+  "vnics": [
+    {
+      "isPublicIpAssigned": true,
+      "subnetId": "<OCI_PUBLIC_SUBNET_OCID>"
+    }
+  ],
+  "freeformTags": {
+    "app": "visionid",
+    "purpose": "ml-inference"
+  }
+}

@@ -18,7 +18,7 @@ class AppConfig:
 	@classmethod
 	def from_environment(cls) -> "AppConfig":
 		"""Build configuration from environment variables and project defaults."""
-		data_dir = Path(os.environ.get("VISIONID_DATA_DIR", "/tmp/visionid" if os.environ.get("VERCEL") else PROJECT_ROOT / "data"))
+		data_dir = PROJECT_ROOT / "data"
 		return cls(
 			database_path=Path(
 				os.environ.get("FACE_RECOGNITION_DB_PATH", data_dir / "face_recognition.db")
