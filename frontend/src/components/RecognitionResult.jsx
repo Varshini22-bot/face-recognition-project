@@ -1,3 +1,4 @@
+import React from 'react'
 import { Check, FileImage, LockKeyhole, LoaderCircle, ScanSearch, Upload } from 'lucide-react'
 
 export default function RecognitionResult({ file, previewUrl, result, loading, error, onRecognize, onUpload }) {
