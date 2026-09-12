@@ -1,3 +1,4 @@
+import React from 'react'
 import { Activity, CircleHelp, LayoutDashboard, ScanFace, UsersRound } from 'lucide-react'
 
 const links = [
